@@ -1,95 +1,50 @@
 # Emoji Cipher
 
-A command-line tool that encrypts text into emoji sequences using real cryptography (AES-GCM + scrypt), and allows secure decryption back to plaintext.
+A secure command-line tool that encrypts text into emoji sequences using AES-GCM encryption and password-based key derivation.
 
-This is not a toy encoder — messages are fully encrypted and authenticated before being represented as emojis.
-
----
-
-## What It Does
-
-- Encrypts plaintext using a password
-- Converts encrypted data into emoji strings
-- Supports multiple emoji “themes” (faces, animals, food, symbols)
-- Decrypts emoji strings back to original messages
-
-The emoji output is safe to share publicly — without the password, it cannot be decrypted.
+The output is visually human-readable, but cryptographically secure.
 
 ---
 
-## How It Works (High-Level)
+## Overview
 
-1. Message is encrypted using AES-GCM
-2. Key is derived from password using scrypt
-3. Encrypted bytes are Base64 encoded
-4. Each Base64 character is mapped to an emoji (64-symbol alphabet)
+Emoji Cipher transforms plaintext into encrypted emoji strings.  
+Unlike simple encoders, the system applies **authenticated encryption first**, then converts the result into emojis.
 
-Decryption reverses this process.
+Without the correct password, the emoji output cannot be decrypted.
 
 ---
 
-## Features
+## Key Capabilities
 
 ### Secure Encryption
-- AES-GCM (authenticated encryption)
-- Scrypt key derivation (resistant to brute force)
+- AES-GCM (confidentiality + integrity)
+- Scrypt-based key derivation
 - Random salt and nonce per message
 
 ### Emoji Encoding Layer
-- 1:1 mapping from Base64 → emoji
-- No information loss
-- Deterministic decoding
+- Lossless mapping from Base64 → emoji alphabet
+- Fully reversible transformation
+- Independent of encryption logic
 
-### Multiple Themes
-- `faces`
-- `animals`
-- `food`
-- `symbols`
+### Theme Support
+- Multiple emoji alphabets:
+  - faces
+  - animals
+  - food
+  - symbols
 
-Each theme defines a unique 64-emoji alphabet.
-
-### CLI Usability
-- Supports stdin and arguments
-- Multi-line paste mode for decryption
+### CLI Interface
+- Encrypt/decrypt commands
+- Multi-line paste mode
 - Optional fast mode for testing
-- Readable emoji formatting (grouped output)
+- Readable grouped output
 
 ---
 
-## Usage
+## Example
 
 ### Encrypt
 
 ```bash
 python cli.py encrypt -m "Hello World"
-----
-### Options:
-
---theme → choose emoji set
---single-line → disable formatting
---fast → reduce scrypt cost (testing only)
-Decrypt
-python cli.py decrypt -e "😀😃😄..."
-
-Options:
-
---paste → multi-line emoji input
---theme → force a theme (otherwise auto-detected)
---fast → match fast encryption mode
-Password Requirements
-Minimum length: 14 characters
-Output Format
-
-By default, emojis are grouped for readability:
-
-😀😃😄😁 😆😅😂🤣
-😊😉😎😍 😘😗😙😚
-
-This formatting does not affect decryption.
-
-Security Notes
-Encryption uses AES-GCM with authenticated data
-Incorrect password or modified emoji text will fail decryption
-Each encryption uses:
-new salt
-new nonce
