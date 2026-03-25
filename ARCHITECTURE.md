@@ -1,162 +1,127 @@
+
 ---
 
-### ✅ Improved `ARCHITECTURE.md`
+### ✅ 2. FINAL `ARCHITECTURE.md`
 
 ```markdown
 # Architecture
 
-## Overview
+## System Overview
 
-The system is a two-layer pipeline:
+The system consists of two primary layers:
 
-1. **Cryptographic Layer** → Encrypts and authenticates data
-2. **Encoding Layer** → Converts binary data into emoji sequences
+1. Cryptographic Layer (security)
+2. Encoding Layer (representation)
 
-The CLI acts as a thin orchestration layer over these components.
-
----
-
-## Module Responsibilities
-
-### 1. CLI Layer (`cli.py`)
-
-Handles:
-- Argument parsing (`encrypt`, `decrypt`)
-- Input sources (stdin / flags / paste mode)
-- Password input and validation
-- Output formatting (grouped emojis)
-- Passing configuration (theme, fast mode)
-
-No cryptographic logic is implemented here.
+The CLI orchestrates both.
 
 ---
 
-### 2. Core Engine (`emoji_cipher.py`)
-
-#### A. Cryptographic Layer
-
-**Key Derivation**
-- Algorithm: scrypt
-- Inputs: password + random salt
-- Output: 256-bit key
-
-**Encryption**
-- Algorithm: AES-GCM
-- Inputs: key + nonce + plaintext
-- Output: ciphertext + authentication tag
-
-**Security Properties**
-- Confidentiality (encryption)
-- Integrity (GCM authentication)
-- Resistance to brute-force (scrypt)
-
----
-
-#### B. Payload Structure
-
-Encrypted data is serialized into:
-
-
-[version][salt_len][salt][nonce_len][nonce][ciphertext]
-
-
-This allows:
-- self-contained messages
-- forward compatibility via versioning
-
----
-
-#### C. Encoding Layer
-
-**Step 1: Base64 Encoding**
-- Binary payload → URL-safe Base64 (no padding)
-
-**Step 2: Emoji Mapping**
-- Each Base64 character (0–63) maps to one emoji
-- Mapping defined by selected theme
-
-This ensures:
-- reversible encoding
-- no entropy loss
-
----
-
-#### D. Decoding Logic
-
-1. Parse emoji string
-2. Identify matching theme:
-   - either forced by user
-   - or auto-tried across all themes
-3. Convert emoji → Base64 → bytes
-4. Deserialize payload
-5. Decrypt using AES-GCM
-
----
-
-## Data Flow
+## High-Level Flow
 
 ### Encryption
 
-
 plaintext
-→ UTF-8 encoding
 → key derivation (scrypt)
 → AES-GCM encryption
 → payload serialization
 → Base64 encoding
 → emoji mapping
-→ output string
+→ output
 
-
----
 
 ### Decryption
 
-
-emoji string
-→ emoji parsing
-→ theme resolution
+emoji input
+→ emoji decoding
 → Base64 reconstruction
 → payload parsing
 → key derivation
 → AES-GCM decryption
 → plaintext
 
+---
+
+## Module Responsibilities
+
+### CLI (`cli.py`)
+
+Responsibilities:
+- Command parsing (encrypt/decrypt)
+- Input handling (message, stdin, paste mode)
+- Password validation
+- Output formatting
+- Passing parameters to core engine
+
+No cryptographic logic is implemented here.
+
+---
+
+### Core Engine (`emoji_cipher.py`)
+
+#### 1. Cryptographic Layer
+
+Key derivation:
+- Algorithm: scrypt
+- Input: password + salt
+
+Encryption:
+- Algorithm: AES-GCM
+- Input: key + nonce + plaintext
+- Output: ciphertext + authentication tag
+
+#### 2. Payload Structure
+
+Serialized format:
+
+[version][salt][nonce][ciphertext]
+
+Ensures:
+- self-contained encrypted message
+- forward compatibility
+
+---
+
+#### 3. Encoding Layer
+
+Step 1:
+Binary payload → Base64 (no padding)
+
+Step 2:
+Base64 characters → emoji symbols (64-character mapping)
+
+Each theme defines its own mapping.
 
 ---
 
 ## Theme System
 
-Each theme defines:
-- exactly 64 emojis
-- 1:1 mapping with Base64 index space
+- Each theme contains exactly 64 emojis
+- Provides a direct mapping to Base64 index space
+- Does not affect encryption
 
-Themes are interchangeable encoding layers:
-- do not affect encryption
-- only affect representation
+---
+
+## Decoding Strategy
+
+- If theme is specified → direct decoding
+- Otherwise → system attempts all themes
 
 ---
 
 ## Error Handling
 
-- Invalid emoji → `InvalidEmojiInput`
-- Wrong password / tampered data → `DecryptionFailed`
-- Password validation enforced before encryption/decryption
+- Invalid emoji input → decoding failure
+- Wrong password → authentication failure
+- Corrupted payload → decryption failure
 
 ---
 
-## Performance Considerations
+## Design Properties
 
-- Default scrypt parameters are intentionally high (secure but slower)
-- `--fast` mode reduces cost for testing
-
----
-
-## Design Characteristics
-
-- Stateless (no storage)
+- Stateless system
 - Deterministic decoding
-- Strong separation:
-  - CLI (interaction)
-  - crypto (security)
-  - encoding (representation)
+- Clear separation of concerns:
+  - CLI
+  - crypto
+  - encoding
